@@ -93,6 +93,10 @@
 #define LWIP_HTTPD 1
 #endif
 
+// #ifndef LWIP_HTTPD_CGI
+// #define LWIP_HTTPD_CGI 1
+// #endif
+
 #ifndef HTTPD_FSDATA_FILE
 #define HTTPD_FSDATA_FILE "htmldata.c"
 #endif 
@@ -111,6 +115,10 @@
 
 #ifndef LWIP_HTTPD_MAX_TAG_INSERT_LEN
 #define LWIP_HTTPD_MAX_TAG_INSERT_LEN 192
+#endif
+
+#ifndef LWIP_HTTPD_SUPPORT_POST
+#define LWIP_HTTPD_SUPPORT_POST   1
 #endif
 
 //#define LWIP_HTTPD_SSI_RAW 1

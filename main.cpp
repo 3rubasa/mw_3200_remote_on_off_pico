@@ -71,50 +71,79 @@ int main() {
     return 0;
 }
 
-// err_t
-// httpd_post_begin(void *connection, const char *uri, const char *http_request,
-//                  u16_t http_request_len, int content_len, char *response_uri,
-//                  u16_t response_uri_len, u8_t *post_auto_wnd)
-// {
-//   LWIP_UNUSED_ARG(connection);
-//   LWIP_UNUSED_ARG(http_request);
-//   LWIP_UNUSED_ARG(http_request_len);
-//   LWIP_UNUSED_ARG(content_len);
-//   LWIP_UNUSED_ARG(post_auto_wnd);
-//   printf("httpd_post_begin:\n");
-//   if (memcmp(uri, "/on", 4) == 0) {
-//     printf("ON\n");
-//     gpio_put(CONTROL_PIN, 1);
-//     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
-//     g_state = true;
-//     snprintf(response_uri, response_uri_len, "/loginfail.html");
-//     return ERR_OK;
-//   } 
-//   else if(memcmp(uri, "/off", 5) == 0) {
-//     printf("OFF\n");
-//     gpio_put(CONTROL_PIN, 0);
-//     cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-//     g_state = false;
-//     snprintf(response_uri, response_uri_len, "/loginfail.html");
-//     return ERR_OK;
-//   } else {
-//     printf("UNKNOWN COMMAND: ");
-//     printf(uri);
-//     printf("\n");
-//     return ERR_VAL;
-//   }
-// }
+#include <lwip/err.h>
+#include "lwip/opt.h"
 
-// err_t
-// httpd_post_receive_data(void *connection, struct pbuf *p)
-// {
-//     printf("httpd_post_receive_data\n");
-//     return ERR_OK;
-// }
+#include "lwip/apps/httpd.h"
+#include "lwip/def.h"
+#include "lwip/mem.h"
 
-// void
-// httpd_post_finished(void *connection, char *response_uri, u16_t response_uri_len)
-// {
-//   printf("httpd_post_finished\n");
-//   snprintf(response_uri, response_uri_len, "/result.html");
-// }
+#include <stdio.h>
+#include <string.h>
+
+#include <map>
+#include <memory>
+
+#include <include/sync.h>
+
+struct PostContext {
+  ~PostContext() {
+    printf("~PostContext() called");
+  }
+  bool uriOk;
+  std::string json;
+  std::string uri;
+};
+
+// TODO: Protect by mux
+mw_tools::sync::CriticalSection cs;
+std::map<void*, std::shared_ptr<PostContext>> contexts; 
+
+err_t
+httpd_post_begin(void *connection, const char *uri, const char *http_request,
+                 u16_t http_request_len, int content_len, char *response_uri,
+                 u16_t response_uri_len, u8_t *post_auto_wnd)
+{
+  LWIP_UNUSED_ARG(connection);
+  LWIP_UNUSED_ARG(http_request);
+  LWIP_UNUSED_ARG(http_request_len);
+  LWIP_UNUSED_ARG(content_len);
+  LWIP_UNUSED_ARG(post_auto_wnd);
+
+  printf("httpd_post_begin:\n");
+  printf("uri: %s\n", uri);
+
+
+  std::shared_ptr<PostContext> ctx = std::shared_ptr<PostContext>{new PostContext};
+  ctx->uri = uri;
+  mw_tools::sync::CriticalSectionGuard guard(cs);
+  contexts[connection] = ctx;
+  return ERR_OK;
+}
+
+err_t
+httpd_post_receive_data(void *connection, struct pbuf *p)
+{
+    printf("httpd_post_receive_data\n");
+    mw_tools::sync::CriticalSectionGuard guard(cs);
+    auto ctx = contexts.at(connection);
+    guard.Exit();
+    ctx->json.append((char*)(p->payload), p->len);
+    return ERR_OK;
+}
+
+void
+httpd_post_finished(void *connection, char *response_uri, u16_t response_uri_len)
+{
+  printf("httpd_post_finished\n");
+  mw_tools::sync::CriticalSectionGuard guard(cs);
+  auto ctx = contexts.at(connection);
+  guard.Exit();
+
+  printf("URI: %s\n", ctx->uri.c_str());
+  printf("JSON: %s\n", ctx->json.c_str());
+  snprintf(response_uri, response_uri_len, "/postok.html");
+
+  guard.Enter();
+  contexts.erase(connection);
+}
