@@ -1,13 +1,13 @@
 
-#include "ssihandlerstate.h"
+#include "getstatehandler.h"
 
-SSIHandlerState::SSIHandlerState(std::shared_ptr<IState> state) :
+GetStateHandler::GetStateHandler(std::shared_ptr<IState> state) :
     m_state(state) 
 {
 
 }
 
-std::string SSIHandlerState::ProcessRequest() {
+std::string GetStateHandler::ProcessRequest() {
     if (m_state->GetState()) {
         return "{\"state\": \"on\"}";
     } else {

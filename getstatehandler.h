@@ -4,9 +4,9 @@
 #include "interfaces.h"
 #include <memory>
 
-class SSIHandlerState : public ISSIHandler {
+class GetStateHandler : public mw_tools::servers::ISSIHandler {
 public:
-    SSIHandlerState(std::shared_ptr<IState> state);
+    GetStateHandler(std::shared_ptr<IState> state);
 
     virtual std::string ProcessRequest();
 private:

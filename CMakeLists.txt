@@ -44,10 +44,12 @@ if (PICO_CYW43_SUPPORTED) # set by PICO_BOARD=pico_w
         add_executable(${APP_NAME}
             main.cpp
             state.cpp
-            ssihandlerstate.cpp
+            getstatehandler.cpp
+            setstatehandler.cpp
             ../mw_tools/src/core.cpp
             ../mw_tools/src/wifi.cpp
             ../mw_tools/src/ssiserver.cpp
+            ../mw_tools/src/postserver.cpp
             ../mw_tools/src/sync.cpp
         )
 
